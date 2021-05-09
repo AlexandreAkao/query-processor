@@ -1,12 +1,13 @@
 package br.bd2.model;
 
+import br.bd2.Util;
 import br.bd2.constants.Keywords;
 import br.bd2.database.DAO;
 import br.bd2.nfa.Lang;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class QueryProcessor {
     private GenericGraph firstGraph;
@@ -21,9 +22,7 @@ public class QueryProcessor {
         boolean acceptQuery = lang.getNfa().run(query);
 
         System.out.println(query);
-        if (acceptQuery) {
-            System.out.println("Query valida");
-        } else {
+        if (!acceptQuery) {
             System.out.println("Query invalida");
             return null;
         }
@@ -56,7 +55,9 @@ public class QueryProcessor {
     }
 
     public void graphGenerator(List<String> separation) {
-        List<String> tables = new ArrayList<>();
+        List<String> columnSelect = new ArrayList<>();
+        Map<String, Map<String, String>> tablesColumns = new HashMap<>();
+        String tableSelect = "";
         GenericGraph auxGraph = null;
 
         System.out.println("------------------------------------------------------------------");
@@ -65,45 +66,139 @@ public class QueryProcessor {
             List<String> s = Arrays.asList(sep.split(" "));
             int fromJoin = s.contains("from") ? s.indexOf("from") : s.indexOf("join");
 
+            if (s.contains("order") && s.contains("by")) {
+                s = s.stream().filter(keyWord -> !keyWord.equals("order")).collect(Collectors.toList());
+                s.set(0, "order by");
+            }
+
             if (s.contains("select")) {
                 String select = sep.replaceAll("select", "π");
+                String[] separationSelect = select.split(" ");
+                String[] subarray = IntStream.range(1, separationSelect.length)
+                        .mapToObj(i -> separationSelect[i].replace(",", ""))
+                        .toArray(String[]::new);
 
-                this.firstGraph = new GenericGraph(select);
+                columnSelect.addAll(Arrays.asList(subarray));
+
+                this.firstGraph = new GenericGraph(select, "select");
                 auxGraph = this.firstGraph;
             } else if (s.contains("where")) {
                 String where = sep.replaceAll("where", "σ");
-                GenericGraph whereGraph = new GenericGraph(where);
+                String[] t = Arrays.stream(where.split("σ|not|and|or"))
+                        .filter(value -> value != null && value.trim().length() > 0)
+                        .map(String::trim)
+                        .toArray(String[]::new);
+
+                addTableOrColumn(t, tableSelect, tablesColumns);
+
+                GenericGraph whereGraph = new GenericGraph(where, where);
                 if (auxGraph != null) {
                     auxGraph.addGenericGraphList(whereGraph);
                 }
                 auxGraph = whereGraph;
             } else if (s.contains("join")) {
-                String join = sep.replaceAll("join (\\w)+ on", "|x|");
-                GenericGraph joinGraph = new GenericGraph(join);
+                String tableJoin = sep.split(" ")[1];
+                String condition = sep.split("join (\\w)+ on")[1].trim();
+                String[] a = Arrays.stream(condition.split("="))
+                        .map(String::trim)
+                        .toArray(String[]::new);
+
+                addTableOrColumn(a, tableSelect, tablesColumns);
+
+                String join = tableSelect + " |X| " + tableJoin + " (" + condition + ")";
+                GenericGraph joinGraph = new GenericGraph(join, "join");
                 if (auxGraph != null) {
                     auxGraph.addGenericGraphList(joinGraph);
                 }
                 auxGraph = joinGraph;
             } else if (s.contains("order by")) {
                 String orderBy = sep.replaceAll("order by", "t");
-                GenericGraph orderByGraph = new GenericGraph(orderBy);
+                GenericGraph orderByGraph = new GenericGraph(orderBy, "order by");
                 if (auxGraph != null) {
                     auxGraph.addGenericGraphList(orderByGraph);
                 }
                 auxGraph = orderByGraph;
+            } else if (s.contains("from")) {
+                tableSelect = sep.split(" ")[1];
+
+                boolean isCorrect = Util.verifyTableAndColumn(dao, columnSelect, tableSelect);
+                if (!isCorrect) return;
             }
             if (fromJoin >= 0) {
-                tables.add(s.get(fromJoin + 1));
+                String table = s.get(fromJoin + 1);
+                tablesColumns.computeIfAbsent(table, k -> new HashMap<>());
             }
         }
 
-        for (String table : tables) {
+        for (Map.Entry<String, Map<String, String>> entry : tablesColumns.entrySet()) {
             if (auxGraph != null) {
-                auxGraph.addGenericGraphList(new GenericGraph(table));
+                String table = entry.getKey();
+
+                boolean isCorrect = Util.verifyTable(dao, table);
+                if (!isCorrect) {
+                    System.out.println("Query invalida");
+                    return;
+                }
+                auxGraph.addGenericGraphList(new GenericGraph(table, "table"));
             }
         }
 
+//        auxGraph = this.firstGraph;
+//        GenericGraph aux2Graph = null;
+
+//        while (auxGraph != null) {
+//            auxGraph = auxGraph.getGenericGraphList()
+//        }
+        System.out.println("Query valida");
         printGraph(this.firstGraph);
+        System.out.println("\n================================================");
+        optimazeGraph(this.firstGraph, null);
+    }
+
+    private void optimazeGraph(GenericGraph auxGraph, GenericGraph auxPreviusGraph) {
+        String a = auxPreviusGraph == null ? auxGraph.getAlgRelational() : auxGraph.getAlgRelational() + " => " + auxPreviusGraph.getAlgRelational();
+        System.out.println(a);
+
+        List<GenericGraph> auxListGraph = auxGraph.getGenericGraphList();
+
+        if (auxListGraph != null) {
+            for (GenericGraph g : auxListGraph) {
+                optimazeGraph(g, auxGraph);
+            }
+        }
+    }
+
+    private void addTableOrColumn(String[] collumns, String defaultTable, Map<String, Map<String, String>> tablesColumns) {
+        for (String value : collumns) {
+            boolean hasTable = Util.hasTable(value);
+
+            if (hasTable) {
+                String[] aux = value.split(" ")[0].split("\\.");
+                String tableCondition = aux[0];
+                String columnCondition = aux[1];
+
+                Map<String, String> tableHashMap = tablesColumns.get(tableCondition);
+
+                if (tableHashMap == null) {
+                    Map<String, String> columnsList = new HashMap<>();
+                    columnsList.put(columnCondition, columnCondition);
+                    tablesColumns.put(tableCondition, columnsList);
+                } else {
+                    tableHashMap.put(columnCondition, columnCondition);
+                }
+            } else {
+                Map<String, String> tableHashMap = tablesColumns.get(defaultTable);
+                String v = value.split(" ")[0];
+
+                if (tableHashMap == null) {
+                    Map<String, String> columnsList = new HashMap<>();
+                    columnsList.put(v, v);
+                    tablesColumns.put(defaultTable, columnsList);
+                } else {
+                    tableHashMap.put(v, v);
+                }
+            }
+        }
     }
 
     public void printGraph(GenericGraph firstGraph) {

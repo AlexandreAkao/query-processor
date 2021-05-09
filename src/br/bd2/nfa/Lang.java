@@ -2,7 +2,7 @@ package br.bd2.nfa;
 
 public class Lang {
     private NFA nfa;
-    char[] sigma = ".,/*-+abcdefghijklmnopqrstuvxywz\"'*123456789".toCharArray();
+    char[] sigma = ".,/*-_+abcdefghijklmnopqrstuvxywz\"'*123456789".toCharArray();
 
     public Lang(String[] tables) {
         State firstState = this.getFirstState(tables);

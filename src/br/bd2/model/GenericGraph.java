@@ -5,10 +5,12 @@ import java.util.List;
 
 public class GenericGraph {
     private String algRelational;
+    private String type;
     private List<GenericGraph> genericGraphList = null;
 
-    public GenericGraph(String algRelational) {
+    public GenericGraph(String algRelational, String type) {
         this.algRelational = algRelational;
+        this.type = type;
     }
 
     public String getAlgRelational() {
@@ -26,5 +28,13 @@ public class GenericGraph {
     public void addGenericGraphList(GenericGraph genericGraph) {
         if (this.genericGraphList == null) this.genericGraphList = new ArrayList<>();
         this.genericGraphList.add(genericGraph);
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 }

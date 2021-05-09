@@ -1,5 +1,7 @@
 package br.bd2.database;
 
+import java.util.Locale;
+
 public class DAO {
     private final Table Usuario = new Usuario();
     private final Table Contas = new Contas();
@@ -12,7 +14,13 @@ public class DAO {
         Table tableModel = getTable(table);
 
         if (tableModel == null) return false;
-        return tableModel.hasColumn(column);
+        return tableModel.hasColumn(column.toLowerCase());
+    }
+
+    public boolean hasTable(String table) {
+        Table tableModel = getTable(table);
+
+        return tableModel != null;
     }
 
     private Table getTable(String table) {

@@ -14,6 +14,13 @@ public class Util {
 
     public static boolean verifyTableAndColumn(DAO dao, List<String> columnSelect, String table) {
         for (String value : columnSelect) {
+            String[] sep = value.split("\\.");
+
+            if (sep.length == 2) {
+                table = sep[0];
+                value = sep[1];
+            }
+
             boolean hasColumn = dao.hasTableAndColumn(table, value);
 
             if (!hasColumn) {

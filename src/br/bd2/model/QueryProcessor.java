@@ -123,6 +123,7 @@ public class QueryProcessor {
 
                 boolean isCorrect = Util.verifyTableAndColumn(dao, columnSelect, tableSelect);
                 if (!isCorrect) return;
+                addTableOrColumn(columnSelect.toArray(String[]::new), tableSelect, tablesColumns);
             }
             if (fromJoin >= 0) {
                 String table = s.get(fromJoin + 1);

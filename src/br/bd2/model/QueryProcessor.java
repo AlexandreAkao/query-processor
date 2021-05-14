@@ -11,7 +11,8 @@ import java.util.stream.IntStream;
 
 public class QueryProcessor {
     private GenericGraph firstGraph;
-    private DAO dao = new DAO();
+    private final DAO dao = new DAO();
+    private String tableDefault;
 
     public List<String> parse(String query, String[] tables) {
         String[] querySeparation = query.split(" ");
@@ -57,6 +58,8 @@ public class QueryProcessor {
     public void graphGenerator(List<String> separation) {
         List<String> columnSelect = new ArrayList<>();
         Map<String, Map<String, String>> tablesColumns = new HashMap<>();
+        Map<String, Map<String, String>> whereConditions = new HashMap<>();
+        Map<String, String> separationHash = new HashMap<>();
         String tableSelect = "";
         GenericGraph auxGraph = null;
 
@@ -81,17 +84,33 @@ public class QueryProcessor {
                 columnSelect.addAll(Arrays.asList(subarray));
 
                 this.firstGraph = new GenericGraph(select, "select");
+                separationHash.put("select", select);
                 auxGraph = this.firstGraph;
             } else if (s.contains("where")) {
                 String where = sep.replaceAll("where", "σ");
-                String[] t = Arrays.stream(where.split("σ|not|and|or"))
+                String[] conditions = Arrays.stream(where.split("σ|not|and|or"))
                         .filter(value -> value != null && value.trim().length() > 0)
                         .map(String::trim)
                         .toArray(String[]::new);
 
+                String[] conditionsWhereList = Arrays.stream(where.split("σ|and|or"))
+                        .filter(value -> value != null && value.trim().length() > 0)
+                        .map(String::trim)
+                        .toArray(String[]::new);
+
+                String[] t = Arrays.stream(conditions)
+                        .map(value -> value.split(" ")[0])
+                        .toArray(String[]::new);
+
+                boolean isCorrect = Util.verifyTableAndColumn(dao, Arrays.asList(t), tableSelect);
+                if (!isCorrect) return;
+
+                addWhereConditions(conditionsWhereList, tableSelect, whereConditions);
                 addTableOrColumn(t, tableSelect, tablesColumns);
 
-                GenericGraph whereGraph = new GenericGraph(where, where);
+                GenericGraph whereGraph = new GenericGraph(where, "where");
+                separationHash.put("where", where);
+
                 if (auxGraph != null) {
                     auxGraph.addGenericGraphList(whereGraph);
                 }
@@ -103,17 +122,34 @@ public class QueryProcessor {
                         .map(String::trim)
                         .toArray(String[]::new);
 
+                boolean isCorrect = Util.verifyTableAndColumn(dao, Arrays.asList(a), tableSelect);
+                if (!isCorrect) return;
+
                 addTableOrColumn(a, tableSelect, tablesColumns);
 
                 String join = tableSelect + " |X| " + tableJoin + " (" + condition + ")";
                 GenericGraph joinGraph = new GenericGraph(join, "join");
+                separationHash.put("join", join);
+
                 if (auxGraph != null) {
                     auxGraph.addGenericGraphList(joinGraph);
                 }
                 auxGraph = joinGraph;
             } else if (s.contains("order by")) {
                 String orderBy = sep.replaceAll("order by", "t");
+                String orderByWithoutOB = orderBy.substring(2);
                 GenericGraph orderByGraph = new GenericGraph(orderBy, "order by");
+                separationHash.put("order by", orderBy);
+
+                String[] a = Arrays.stream(orderByWithoutOB.split(","))
+                        .map(String::trim)
+                        .map(value -> value.split(" ")[0])
+                        .toArray(String[]::new);
+
+                boolean isCorrect = Util.verifyTableAndColumn(dao, Arrays.asList(a), tableSelect);
+                if (!isCorrect) return;
+
+                addTableOrColumn(a, tableSelect, tablesColumns);
                 if (auxGraph != null) {
                     auxGraph.addGenericGraphList(orderByGraph);
                 }
@@ -144,28 +180,133 @@ public class QueryProcessor {
             }
         }
 
-//        auxGraph = this.firstGraph;
-//        GenericGraph aux2Graph = null;
-
-//        while (auxGraph != null) {
-//            auxGraph = auxGraph.getGenericGraphList()
-//        }
+        this.tableDefault = tableSelect;
         System.out.println("Query valida");
         printGraph(this.firstGraph);
         System.out.println("\n================================================");
-        optimazeGraph(this.firstGraph, null);
+        optimazeGraph(
+                whereConditions,
+                separationHash,
+                tablesColumns
+        );
+        System.out.println("");
     }
 
-    private void optimazeGraph(GenericGraph auxGraph, GenericGraph auxPreviusGraph) {
-        String a = auxPreviusGraph == null ? auxGraph.getAlgRelational() : auxGraph.getAlgRelational() + " => " + auxPreviusGraph.getAlgRelational();
-        System.out.println(a);
+    private void optimazeGraph(
+            Map<String, Map<String, String>> whereConditions,
+            Map<String, String> separationHash,
+            Map<String, Map<String, String>> tablesColumns
+    ) {
+        GenericGraph graphRef = null;
 
-        List<GenericGraph> auxListGraph = auxGraph.getGenericGraphList();
+        String orderBy = separationHash.get("order by");
+        String where = separationHash.get("where");
+        GenericGraph select = new GenericGraph(separationHash.get("select"), "select");
+        String[] formatedConditions = retriveFormatedConditions(where);
 
-        if (auxListGraph != null) {
-            for (GenericGraph g : auxListGraph) {
-                optimazeGraph(g, auxGraph);
+        if (orderBy != null) {
+            this.firstGraph = new GenericGraph(orderBy, "order by");
+            this.firstGraph.addGenericGraphList(select);
+        } else {
+            this.firstGraph = select;
+        }
+
+        graphRef = select;
+
+        if (formatedConditions.length != 1) {
+            Map<String, String> whereCond = new HashMap<>();
+            for (String formatedConditionsSep : formatedConditions) {
+                String[] cond = Arrays.stream(formatedConditionsSep.split("and"))
+                        .filter(value -> value != null && value.trim().length() > 0)
+                        .map(String::trim)
+                        .toArray(String[]::new);
+
+                if (cond.length > 1 && !this.allConditionSameTable(cond)) {
+                    GenericGraph whereGraph = new GenericGraph("σ " + formatedConditionsSep, "where");
+                    graphRef.addGenericGraphList(whereGraph);
+                    graphRef = whereGraph;
+                } else {
+                    String table = Util.hasTable(cond[0]) ? cond[0].split("\\.")[0] : this.tableDefault;
+
+                    whereCond.merge(table, formatedConditionsSep, (a, b) -> a + " or " + b);
+                }
             }
+
+            GenericGraph join = new GenericGraph(separationHash.get("join"), "join");
+            graphRef.addGenericGraphList(join);
+            graphRef = join;
+
+            List<GenericGraph> tableList = new ArrayList<>();
+            for (Map.Entry<String, Map<String, String>> entry : tablesColumns.entrySet()) {
+                List<String> columns = new ArrayList<>();
+                String table = entry.getKey();
+
+                for (Map.Entry<String, String> v : entry.getValue().entrySet()) {
+                    columns.add(v.getValue());
+                }
+                String projection = "π " + String.join(", ", columns);
+
+                GenericGraph projectionGraph = new GenericGraph(projection, "projection");
+
+                String queryWhere = whereCond.get(table);
+
+                if (queryWhere != null) {
+                    GenericGraph queryWhereGraph = new GenericGraph(queryWhere, "where");
+                    projectionGraph.addGenericGraphList(queryWhereGraph);
+
+                    GenericGraph tableGraph = new GenericGraph(table, "table");
+                    queryWhereGraph.addGenericGraphList(tableGraph);
+                } else {
+                    GenericGraph tableGraph = new GenericGraph(table, "table");
+                    projectionGraph.addGenericGraphList(tableGraph);
+                }
+
+                tableList.add(projectionGraph);
+            }
+
+            graphRef.addGenericGraphList(tableList);
+        } else {
+            GenericGraph join = new GenericGraph(separationHash.get("join"), "join");
+            graphRef.addGenericGraphList(join);
+            graphRef = join;
+
+            List<GenericGraph> tableList = new ArrayList<>();
+            for (Map.Entry<String, Map<String, String>> entry : tablesColumns.entrySet()) {
+                List<String> columns = new ArrayList<>();
+                String table = entry.getKey();
+
+                for (Map.Entry<String, String> v : entry.getValue().entrySet()) {
+                    columns.add(v.getValue());
+                }
+                String projection = "π " + String.join(", ", columns);
+
+                GenericGraph projectionGraph = new GenericGraph(projection, "projection");
+
+                Map<String, String> conditionsTable = whereConditions.get(table);
+
+                if (conditionsTable != null) {
+                    List<String> conditionQueryList = new ArrayList<>();
+
+                    for (Map.Entry<String, String> condition : conditionsTable.entrySet()) {
+                        conditionQueryList.add(condition.getValue());
+                    }
+
+                    String conditionQuery = "σ " + String.join(" " + formatedConditions[0] + " ", columns);
+
+                    GenericGraph queryWhereGraph = new GenericGraph(conditionQuery, "where");
+                    projectionGraph.addGenericGraphList(queryWhereGraph);
+
+                    GenericGraph tableGraph = new GenericGraph(table, "table");
+                    queryWhereGraph.addGenericGraphList(tableGraph);
+                } else {
+                    GenericGraph tableGraph = new GenericGraph(table, "table");
+                    projectionGraph.addGenericGraphList(tableGraph);
+                }
+
+                tableList.add(projectionGraph);
+            }
+
+            graphRef.addGenericGraphList(tableList);
         }
     }
 
@@ -200,6 +341,113 @@ public class QueryProcessor {
                 }
             }
         }
+    }
+
+    private void addWhereConditions(String[] conditions, String defaultTable, Map<String, Map<String, String>> whereConditions) {
+        for (String value : conditions) {
+            String sep = value.split(" ")[0];
+
+            boolean hasTable = Util.hasTable(sep);
+
+            if (hasTable) {
+                String table = sep.split("\\.")[0];
+
+                Map<String, String> conditionHashMap = whereConditions.get(table);
+
+                if (conditionHashMap == null) {
+                    Map<String, String> conditionList = new HashMap<>();
+                    conditionList.put(value, value);
+                    whereConditions.put(table, conditionList);
+                } else {
+                    conditionHashMap.put(value, value);
+                }
+            } else {
+                Map<String, String> conditionHashMap = whereConditions.get(defaultTable);
+
+                if (conditionHashMap == null) {
+                    Map<String, String> columnsList = new HashMap<>();
+                    columnsList.put(value, value);
+                    whereConditions.put(defaultTable, columnsList);
+                } else {
+                    conditionHashMap.put(value, value);
+                }
+            }
+        }
+    }
+
+    private String[] retriveFormatedConditions(String where) {
+        boolean and = where.contains(" and ");
+        boolean or = where.contains(" or ");
+
+        String[] allConditions = Arrays.stream(where.split("σ|not|and|or"))
+                .filter(value -> value != null && value.trim().length() > 0)
+                .map(String::trim)
+                .toArray(String[]::new);
+
+        if (and && or && !this.allConditionSameTable(allConditions)) {
+            String[] a = Arrays.stream(where.split("σ|or"))
+                    .filter(value -> value != null && value.trim().length() > 0)
+                    .map(String::trim)
+                    .toArray(String[]::new);
+
+            List<String> queryWhere = new ArrayList<>();
+
+            for (String cond : a) {
+                String[] b = Arrays.stream(cond.split("not|and|or"))
+                        .filter(value -> value != null && value.trim().length() > 0)
+                        .map(String::trim)
+                        .toArray(String[]::new);
+
+                String table = Util.hasTable(b[0]) ? b[0].split("\\.")[0] : this.tableDefault;
+
+                for (String condi : b) {
+                    condi = Util.hasTable(condi) ? condi.split("\\.")[0] : this.tableDefault;
+
+                    if (!table.equals(condi)) {
+                        System.out.println("Mais de uma tabela");
+                        break;
+                    }
+                }
+
+                queryWhere.add(cond);
+            }
+
+            return queryWhere.toArray(String[]::new);
+        } else {
+//            if (or) {
+//                return new String[]{"or"};
+//            } else {
+//                String[] a = Arrays.stream(where.split("σ|or|not|and"))
+//                        .filter(value -> value != null && value.trim().length() > 0)
+//                        .map(String::trim)
+//                        .toArray(String[]::new);
+//
+//                String table = Util.hasTable(a[0]) ? a[0].split("\\.")[0] : this.tableDefault;
+//
+//                for (String cond : a) {
+//                    cond = Util.hasTable(cond) ? cond.split("\\.")[0] : this.tableDefault;
+//
+//                    if (!table.equals(cond)) {
+//                        System.out.println("Mais de uma tabela");
+//                        return new String[]{"multi"};
+//                    }
+//                }
+//
+//                return new String[]{"and"};
+//            }
+            return and ? new String[]{"and"} : new String[]{"or"};
+        }
+    }
+
+    private boolean allConditionSameTable(String[] conditions) {
+        String table = Util.hasTable(conditions[0]) ? conditions[0].split("\\.")[0] : this.tableDefault;
+
+        for (String condition : conditions) {
+            condition = Util.hasTable(condition) ? condition.split("\\.")[0] : this.tableDefault;
+
+            if (!condition.equals(table)) return false;
+        }
+        return true;
     }
 
     public void printGraph(GenericGraph firstGraph) {

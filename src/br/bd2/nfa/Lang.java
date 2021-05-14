@@ -87,6 +87,8 @@ public class Lang {
 
         State columnOrderBy = new State("columnOrderBy");
         State columnOrderBy_ = new State("columnOrderBy_");
+        State columnOrderByVirgula = new State("columnOrderByVirgula");
+        State columnOrderByVirgula_ = new State("columnOrderByVirgula_");
 
         table_.addTransition(orderByO, 'o');
         orderByO.addTransition(orderByR1, 'r');
@@ -100,10 +102,13 @@ public class Lang {
 
         for (char c : sigma) {
             orderBy_2.addTransition(columnOrderBy, c);
+            columnOrderByVirgula_.addTransition(columnOrderBy, c);
             columnOrderBy.addTransition(columnOrderBy, c);
         }
         columnOrderBy.setFinal();
         columnOrderBy.addTransition(columnOrderBy_, ' ');
+        columnOrderBy.addTransition(columnOrderByVirgula, ',');
+        columnOrderByVirgula.addTransition(columnOrderByVirgula_, ' ');
 
         State ascA = new State("ascA");
         State ascS = new State("ascS");
@@ -113,6 +118,8 @@ public class Lang {
         ascA.addTransition(ascS, 's');
         ascS.addTransition(ascC, 'c');
         ascC.setFinal();
+        ascC.addTransition(columnOrderByVirgula, ',');
+
 
         State descD = new State("descD");
         State descE = new State("descE");
@@ -124,6 +131,7 @@ public class Lang {
         descE.addTransition(descS, 's');
         descS.addTransition(descC, 'c');
         descC.setFinal();
+        descC.addTransition(columnOrderByVirgula, ',');
 
         State whereW = new State("whereW");
         State whereH = new State("whereH");

@@ -9,7 +9,7 @@ public class Contas implements Table {
 
     public boolean hasColumn(String column) {
         switch (column) {
-            case "idConta":
+            case "idconta":
             case "descricao":
             case "tipoconta_idtipoconta":
             case "usuario_idusuario":

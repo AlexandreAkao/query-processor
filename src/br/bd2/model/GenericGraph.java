@@ -30,6 +30,11 @@ public class GenericGraph {
         this.genericGraphList.add(genericGraph);
     }
 
+    public void addGenericGraphList(List<GenericGraph> genericGraphList) {
+        if (this.genericGraphList == null) this.genericGraphList = new ArrayList<>();
+        this.genericGraphList.addAll(genericGraphList);
+    }
+
     public String getType() {
         return type;
     }

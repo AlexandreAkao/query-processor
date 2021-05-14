@@ -16,12 +16,13 @@ public class Util {
         for (String value : columnSelect) {
             String[] sep = value.split("\\.");
 
-            if (sep.length == 2) {
-                table = sep[0];
-                value = sep[1];
-            }
+            boolean hasColumn;
 
-            boolean hasColumn = dao.hasTableAndColumn(table, value);
+            if (sep.length == 2) {
+                hasColumn = dao.hasTableAndColumn(sep[0], sep[1]);;
+            } else {
+                hasColumn = dao.hasTableAndColumn(table, value);
+            }
 
             if (!hasColumn) {
                 System.out.println("Coluna [" + value + "] na tabela [" + table + "] nao existe ou Tabela nao existe");

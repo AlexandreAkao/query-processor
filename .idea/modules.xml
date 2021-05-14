@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Query Processor.iml" filepath="$PROJECT_DIR$/Query Processor.iml" />
+      <module fileurl="file://$PROJECT_DIR$/query-processor.iml" filepath="$PROJECT_DIR$/query-processor.iml" />
     </modules>
   </component>
 </project>

@@ -1,0 +1,123 @@
+.App {
+  padding: 20px;
+  display: flex;
+}
+
+#query-container {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+#info-container {
+  flex: 1;
+}
+
+#tree-container {
+  border: 2px solid #151515;
+  border-radius: 20px;
+  height: 70%;
+  background-color: white;
+  box-shadow: inset 0 0 10px 1px #151515; 
+}
+
+#input-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+#query-input {
+  border: 0;
+  width: 60%;
+  height: 200px;
+  font-size: 24px;
+  resize: none;
+  padding: 10px;
+  border-radius: 15px 0 0 15px;
+}
+
+#input-button {
+  background: #2660A4;
+  border: 0;
+  padding: 20px;
+  font-size: 20px;
+  color: #fafafa;
+  border-radius: 0 15px 15px 0;
+  cursor: pointer;
+  transition: .2s all ease;
+  border-left: 5px solid #151515;
+}
+
+#input-button:hover {
+  background: #fafafa;
+  color: #2660A4;
+  transition: .2s all ease;
+}
+
+#query {
+  display: block;
+  min-height: 30px;
+  width: 100%;
+  font-size: 20px;
+  color: #fafafa;
+  padding: 10px 20px 20px 20px;
+}
+
+.rd3t-node {
+  fill: #2660A4 !important;
+  stroke: #151515 !important;
+  stroke-width: 7px !important;
+}
+
+.rd3t-label__title {
+  stroke: #000 !important;
+  stroke-width: 0px !important;
+  font-weight: 600 !important;
+}
+
+.rd3t-leaf-node {
+  fill: #151515 !important;
+}
+
+#info-container {
+  margin: 0 50px;
+  border-radius: 15px;
+  background-color: #fafafa;
+  overflow-y: scroll;
+}
+
+#info-container::-webkit-scrollbar-track
+{
+  box-shadow: inset 0 0 6px rgba(0,0,0,.3);
+	-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+	border-radius: 15px;
+	background-color: #F5F5F5;
+}
+
+#info-container::-webkit-scrollbar
+{
+	width: 12px;
+	border-radius: 0 15px 15px 0;
+	background-color: #F5F5F5;
+}
+
+#info-container::-webkit-scrollbar-thumb
+{
+	border-radius: 15px;
+  box-shadow: inset 0 0 6px rgba(0,0,0,.3);
+	-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,.3);
+	background-color: #2660A4;
+}
+
+#query-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#query-title {
+  color: #F5F5F5;
+  font-size: 40px;
+}

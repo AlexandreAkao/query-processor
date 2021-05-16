@@ -20,12 +20,22 @@ public class QueryProcessorController {
     public ResponseEntity queryGenerator(@RequestBody RequestQuery query) {
         String[] tables = Configuration.getTableArray();
         QueryProcessor queryProcessor = Configuration.getQueryProcessor();
+        Map<String, Object> res = new LinkedHashMap<>();
 
         List<String> s = queryProcessor.parse(query.getQuery().toLowerCase(), tables);
 
+        if (s == null) {
+            res.put("error", "Query invalida");
+            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(res);
+        }
+
         GenericGraph gg = queryProcessor.graphGenerator(s);
 
-        Map<String, Object> res = new LinkedHashMap<>();
+        if (gg == null) {
+            res.put("error", "Coluna ou tabela invalida");
+            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(res);
+        }
+
         res.put("table-list", Configuration.getTableArray());
         res.put("query", query.getQuery());
         res.put("query-tree", gg);

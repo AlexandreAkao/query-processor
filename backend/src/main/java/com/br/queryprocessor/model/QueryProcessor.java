@@ -274,9 +274,13 @@ public class QueryProcessor {
 
                 graphRef.addGenericGraphList(tableList);
             } else {
-                GenericGraph join = new GenericGraph(separationHash.get("join"), "join");
-                graphRef.addGenericGraphList(join);
-                graphRef = join;
+                String join = separationHash.get("join");
+
+                if (join != null) {
+                    GenericGraph joinGraph = new GenericGraph(join, "join");
+                    graphRef.addGenericGraphList(joinGraph);
+                    graphRef = joinGraph;
+                }
 
                 List<GenericGraph> tableList = new ArrayList<>();
                 for (Map.Entry<String, Map<String, String>> entry : tablesColumns.entrySet()) {

@@ -6,7 +6,7 @@ const Table = ({ name, collumns }: {name: string, collumns: String[]}) => {
     <div className="table-container">
       <span className="table-title">{name}</span>
       <div className="collumns-container">
-        {collumns.map(collumn => <span>{collumn}</span>)}
+        {collumns.map(collumn => <span key={`${name}_${collumn}`}>{collumn}</span>)}
       </div>
     </div>
   )

@@ -1,6 +1,8 @@
 import { ChangeEvent, useState, useEffect } from 'react';
 import { RawNodeDatum } from 'react-d3-tree/lib/types/common';
 import Tree from 'react-d3-tree';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 import Table from './components/Table';
 import api from './services/api';
@@ -15,20 +17,43 @@ function App() {
   const [tables, setTables] = useState<{ name: string, collumns: string[] }[]>([]);
 
   const handleQuery = async () => {
-    const queryFormated = query.replaceAll("\n", " ");
-    const { data } = await api.post("/query", {
-      query: queryFormated
-    })
+    try {
+      const queryFormated = query.replaceAll("\n", " ");
+      const { data } = await api.post("/query", {
+        query: queryFormated
+      })
+      const queryTreeResponse = data['query-tree'];
+      const children = generateChildren(queryTreeResponse.genericGraphList);
+  
+      const queryTree = {
+        name: queryTreeResponse.algRelational,
+        children
+      }
+      setQueryVisulizer(queryFormated);
+      setqueryTree(queryTree)
 
-    const queryTreeResponse = data['query-tree'];
-    const children = generateChildren(queryTreeResponse.genericGraphList);
+      toast.success(`${200}: Query enviada com sucesso`, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+    } catch (error) {
+      const { status, data: { error: errorResponse } } = error.response;
 
-    const queryTree = {
-      name: queryTreeResponse.algRelational,
-      children
+      toast.error(`${status}: ${errorResponse}`, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
     }
-    setQueryVisulizer(queryFormated);
-    setqueryTree(queryTree)
   }
 
   const handleChangeQuery = (event: ChangeEvent<HTMLTextAreaElement>) => setQuery(event.target.value);
@@ -49,6 +74,7 @@ function App() {
 
   return (
     <div className="App">
+      <ToastContainer />
       <div id="query-container">
         <div id="input-container">
           <textarea 
@@ -83,7 +109,7 @@ function App() {
         </div>
       </div>
       <div id="info-container">
-        {tables.map(table => <Table name={table.name} collumns={table.collumns} />)}
+        {tables.map(table => <Table key={table.name} name={table.name} collumns={table.collumns} />)}
       </div>
     </div>
   );

@@ -259,7 +259,7 @@ public class QueryProcessor {
                     String queryWhere = whereCond.get(table);
 
                     if (queryWhere != null) {
-                        GenericGraph queryWhereGraph = new GenericGraph(queryWhere, "where");
+                        GenericGraph queryWhereGraph = new GenericGraph("σ " + queryWhere, "where");
                         projectionGraph.addGenericGraphList(queryWhereGraph);
 
                         GenericGraph tableGraph = new GenericGraph(table, "table");
@@ -284,42 +284,69 @@ public class QueryProcessor {
 
                 List<GenericGraph> tableList = new ArrayList<>();
                 for (Map.Entry<String, Map<String, String>> entry : tablesColumns.entrySet()) {
-                    List<String> columns = new ArrayList<>();
                     String table = entry.getKey();
+                    if (join != null) {
+                        List<String> columns = new ArrayList<>();
 
-                    for (Map.Entry<String, String> v : entry.getValue().entrySet()) {
-                        columns.add(v.getValue());
-                    }
-                    String projection = "π " + String.join(", ", columns);
+                        for (Map.Entry<String, String> v : entry.getValue().entrySet()) {
+                            columns.add(v.getValue());
+                        }
+                        String projection = "π " + String.join(", ", columns);
 
-                    GenericGraph projectionGraph = new GenericGraph(projection, "projection");
+                        GenericGraph projectionGraph = new GenericGraph(projection, "projection");
 
-                    Map<String, String> conditionsTable = whereConditions.get(table);
+                        Map<String, String> conditionsTable = whereConditions.get(table);
 
-                    if (conditionsTable != null) {
-                        List<String> conditionQueryList = new ArrayList<>();
+                        if (conditionsTable != null) {
+                            List<String> conditionQueryList = new ArrayList<>();
 
-                        for (Map.Entry<String, String> condition : conditionsTable.entrySet()) {
-                            conditionQueryList.add(condition.getValue());
+                            for (Map.Entry<String, String> condition : conditionsTable.entrySet()) {
+                                conditionQueryList.add(condition.getValue());
+                            }
+
+                            boolean haveSigma = formatedConditions[0].contains("σ");
+                            String conditionQuery;
+
+                            conditionQuery = haveSigma ? formatedConditions[0]
+                                    : "σ " + String.join(" " + formatedConditions[0] + " ", conditionQueryList);
+
+                            GenericGraph queryWhereGraph = new GenericGraph(conditionQuery, "where");
+                            projectionGraph.addGenericGraphList(queryWhereGraph);
+
+                            GenericGraph tableGraph = new GenericGraph(table, "table");
+                            queryWhereGraph.addGenericGraphList(tableGraph);
+                        } else {
+                            GenericGraph tableGraph = new GenericGraph(table, "table");
+                            projectionGraph.addGenericGraphList(tableGraph);
                         }
 
-                        boolean haveSigma = formatedConditions[0].contains("σ");
-                        String conditionQuery;
-
-                        conditionQuery = haveSigma ? formatedConditions[0]
-                                : "σ " + String.join(" " + formatedConditions[0] + " ", conditionQueryList);
-
-                        GenericGraph queryWhereGraph = new GenericGraph(conditionQuery, "where");
-                        projectionGraph.addGenericGraphList(queryWhereGraph);
-
-                        GenericGraph tableGraph = new GenericGraph(table, "table");
-                        queryWhereGraph.addGenericGraphList(tableGraph);
+                        tableList.add(projectionGraph);
                     } else {
-                        GenericGraph tableGraph = new GenericGraph(table, "table");
-                        projectionGraph.addGenericGraphList(tableGraph);
-                    }
+                        Map<String, String> conditionsTable = whereConditions.get(table);
 
-                    tableList.add(projectionGraph);
+                        if (conditionsTable != null) {
+                            List<String> conditionQueryList = new ArrayList<>();
+
+                            for (Map.Entry<String, String> condition : conditionsTable.entrySet()) {
+                                conditionQueryList.add(condition.getValue());
+                            }
+
+                            boolean haveSigma = formatedConditions[0].contains("σ");
+                            String conditionQuery;
+
+                            conditionQuery = haveSigma ? formatedConditions[0]
+                                    : "σ " + String.join(" " + formatedConditions[0] + " ", conditionQueryList);
+
+                            GenericGraph queryWhereGraph = new GenericGraph(conditionQuery, "where");
+                            graphRef.addGenericGraphList(queryWhereGraph);
+
+                            GenericGraph tableGraph = new GenericGraph(table, "table");
+                            queryWhereGraph.addGenericGraphList(tableGraph);
+                        } else {
+                            GenericGraph tableGraph = new GenericGraph(table, "table");
+                            graphRef.addGenericGraphList(tableGraph);
+                        }
+                    }
                 }
 
                 graphRef.addGenericGraphList(tableList);
@@ -335,20 +362,25 @@ public class QueryProcessor {
 
             List<GenericGraph> tableList = new ArrayList<>();
             for (Map.Entry<String, Map<String, String>> entry : tablesColumns.entrySet()) {
-                List<String> columns = new ArrayList<>();
                 String table = entry.getKey();
+                if (join != null) {
+                    List<String> columns = new ArrayList<>();
 
-                for (Map.Entry<String, String> v : entry.getValue().entrySet()) {
-                    columns.add(v.getValue());
+                    for (Map.Entry<String, String> v : entry.getValue().entrySet()) {
+                        columns.add(v.getValue());
+                    }
+                    String projection = "π " + String.join(", ", columns);
+
+                    GenericGraph projectionGraph = new GenericGraph(projection, "projection");
+
+                    GenericGraph tableGraph = new GenericGraph(table, "table");
+                    projectionGraph.addGenericGraphList(tableGraph);
+
+                    tableList.add(projectionGraph);
+                } else {
+                    GenericGraph tableGraph = new GenericGraph(table, "table");
+                    tableList.add(tableGraph);
                 }
-                String projection = "π " + String.join(", ", columns);
-
-                GenericGraph projectionGraph = new GenericGraph(projection, "projection");
-
-                GenericGraph tableGraph = new GenericGraph(table, "table");
-                projectionGraph.addGenericGraphList(tableGraph);
-
-                tableList.add(projectionGraph);
             }
 
             graphRef.addGenericGraphList(tableList);

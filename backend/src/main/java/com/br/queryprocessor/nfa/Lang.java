@@ -2,7 +2,7 @@ package com.br.queryprocessor.nfa;
 
 public class Lang {
     private NFA nfa;
-    char[] sigma = ".,/*-_+abcdefghijklmnopqrstuvxywz\"'*1234567890".toCharArray();
+    char[] sigma = ".,/*-_+abcdefghijklmnopqrstuvxywz*()\"'*1234567890".toCharArray();
 
     public Lang(String[] tables) {
         State firstState = this.getFirstState(tables);

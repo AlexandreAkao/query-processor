@@ -22,7 +22,7 @@ public class QueryProcessorController {
         QueryProcessor queryProcessor = Configuration.getQueryProcessor();
         Map<String, Object> res = new LinkedHashMap<>();
 
-        List<String> s = queryProcessor.parse(query.getQuery().toLowerCase(), tables);
+        List<String> s = queryProcessor.parse(query.getQuery().toLowerCase().trim(), tables);
 
         if (s == null) {
             res.put("error", "Query invalida");

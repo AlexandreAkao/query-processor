@@ -184,7 +184,7 @@ public class QueryProcessor {
         System.out.println("Query valida");
         printGraph(this.firstGraph);
         System.out.println("\n================================================");
-        optimazeGraph(
+        optimizeGraph(
                 whereConditions,
                 separationHash,
                 tablesColumns
@@ -193,7 +193,7 @@ public class QueryProcessor {
         return this.firstGraph;
     }
 
-    private void optimazeGraph(
+    private void optimizeGraph(
             Map<String, Map<String, String>> whereConditions,
             Map<String, String> separationHash,
             Map<String, Map<String, String>> tablesColumns
@@ -271,7 +271,7 @@ public class QueryProcessor {
 
                     tableList.add(projectionGraph);
                 }
-                
+
                 tableList = Util.sortList(tableList);
                 graphRef.addGenericGraphList(tableList);
             } else {

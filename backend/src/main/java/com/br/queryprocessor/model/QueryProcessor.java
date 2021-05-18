@@ -271,7 +271,8 @@ public class QueryProcessor {
 
                     tableList.add(projectionGraph);
                 }
-
+                
+                tableList = Util.sortList(tableList);
                 graphRef.addGenericGraphList(tableList);
             } else {
                 String join = separationHash.get("join");
@@ -349,6 +350,7 @@ public class QueryProcessor {
                     }
                 }
 
+                tableList = Util.sortList(tableList);
                 graphRef.addGenericGraphList(tableList);
             }
         } else {

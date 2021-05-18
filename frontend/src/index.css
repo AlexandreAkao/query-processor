@@ -18,8 +18,8 @@ html, body, #root, .App {
 
 html {
   scroll-behavior: smooth;
-  background-color: #151515;
-
+  background: rgb(21,21,21);
+  background: linear-gradient(189deg, rgba(21,21,21,1) 0%, rgb(12, 23, 26) 100%);
 }
 
 li, ul, ol {

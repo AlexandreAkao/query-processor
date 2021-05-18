@@ -1,9 +1,19 @@
+@keyframes animStar {
+  from {
+    transform: translateY(0px)
+  }
+  to {
+    transform: translateY(-2000px)
+  }		
+}
+
 .App {
   padding: 20px;
   display: flex;
 }
 
 #query-container {
+  z-index: 2;
   flex: 3;
   display: flex;
   flex-direction: column;
@@ -82,6 +92,7 @@
 }
 
 #info-container {
+  z-index: 2;
   margin: 0 50px;
   border-radius: 15px;
   background-color: #fafafa;

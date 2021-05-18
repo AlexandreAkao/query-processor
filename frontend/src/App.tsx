@@ -6,6 +6,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import Table from './components/Table';
+import Sky from './components/Sky';
 import api from './services/api';
 import { generateChildren } from './utils/generateChildren';
 
@@ -76,6 +77,7 @@ function App() {
   return (
     <div className="App">
       <ToastContainer />
+      <Sky />
       <div id="query-container">
         <div id="input-container">
           <textarea 
